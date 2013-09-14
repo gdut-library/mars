@@ -3,6 +3,7 @@
 from flask import Flask
 
 from .db import db
+from .views import r
 
 
 def build(**settings):
@@ -13,5 +14,7 @@ def build(**settings):
 
     db.init_app(app)
     db.app = app
+
+    app.register_blueprint(r.app, url_prefix='/api')
 
     return app
