@@ -1,7 +1,7 @@
 Flask==0.10.1
 Flask-SQLAlchemy==1.0
 Flask-Script==0.6.2
--e git+git@github.com:bcho/gdut-library-api.git@6bd84a04f42ba60f7bc83d42aa0f2269df5d60b3#egg=GDUT_Library_API-master
+-e git+https://github.com/bcho/gdut-library-api.git@6bd84a04f42ba60f7bc83d42aa0f2269df5d60b3#egg=GDUT_Library_API-master
 Jinja2==2.7.1
 Mako==0.9.0
 MarkupSafe==0.18
