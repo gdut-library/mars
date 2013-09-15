@@ -166,17 +166,15 @@ class BookSlipView(MethodView):
 
         return jsonify(books=user.book_slip)
 
-    def put(self, username, token, me):
+    def put(self, username, token, me, ctrlno):
         '''往用户书单里添加一本图书
 
         如果添加的书籍不存在，返回 404
 
         :param ctrlno: 书籍编号
-
-        TODO 使用 api/user/books/:ctrlno 的模式
         '''
         user = User.query.filter_by(cardno=username).first()
-        book = self._get_book_record(request.args.get('ctrlno'))
+        book = self._get_book_record(ctrlno)
 
         if not book:
             return jsonify(msg=u'添加的书籍不存在'), 404
@@ -186,19 +184,16 @@ class BookSlipView(MethodView):
 
         return Response(status=201)
 
-    def delete(self, username, token, me):
+    def delete(self, username, token, me, ctrlno):
         '''从用户书单里移除书籍
 
         如果需要移除的书籍不在书单里，返回 404
 
         :param ctrlno: 书籍编号，如果值为 `all` 则清空整个书单
-
-        TODO 使用 api/user/books/:ctrlno 的模式
         '''
         user = User.query.filter_by(cardno=username).first()
         book_slip = user.book_slip
 
-        ctrlno = request.args.get('ctrlno')
         if ctrlno == u'all':
             book_slip.books = book_slip.books[0:0]
         else:
@@ -213,7 +208,11 @@ class BookSlipView(MethodView):
         return Response(status=201)
 
 
-app.add_url_rule('/user/books', view_func=BookSlipView.as_view('bookslip'))
+book_slip_view = BookSlipView.as_view('bookslip')
+app.add_url_rule('/user/books/<string:ctrlno>', view_func=book_slip_view,
+                 methods=['PUT', 'DELETE'])
+app.add_url_rule('/user/books', view_func=book_slip_view,
+                 methods=['GET'])
 
 
 @app.route('/book/<string:ctrlno>', methods=['GET'])
