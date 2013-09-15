@@ -122,7 +122,7 @@ def book_search():
 
     q = request.args.get('q')
     verbose = int(request.args.get('verbose', 0))
-    limit = int(request.args.get('limit', 0))
+    limit = int(request.args.get('limit', 20))
     verbose = True if verbose else False
 
     book = api.Book()
