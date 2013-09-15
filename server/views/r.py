@@ -18,18 +18,44 @@ from server.models import User, Book, BookLocation
 app = Blueprint('r', __name__)
 
 
-def auth_required(func):
-    @wraps(func)
-    def check_auth(*args, **kwargs):
-        me = api.Me()
-        token = request.headers['X-LIBRARY-TOKEN']
+class AuthRequired(object):
+    '''对调用请求进行用户登录验证的装饰器，
+    被装饰函数在调用时会填入 `username`, `token` 和 `api.me` 实例，
+    假如 `pass_pwd` 为真，将填入用户密码 `password`
 
-        if not me.check_login(token):
-            return jsonify(error=u'登录过期'), 401
+    如果登录失败，返回 `登录失败`, 403
+    如果需要激活，返回 `需要激活帐号`, 403 以及验证地址
 
-        return func(token, me, *args, **kwargs)
+    :param pass_pwd: 是否填入用户密码, 默认为否
+    '''
+    def __init__(self, pass_pwd=None):
+        self.pass_pwd = pass_pwd or pass_pwd
 
-    return check_auth
+    def __call__(self, func):
+        @wraps(func)
+        def check_auth(*args, **kwargs):
+            me = api.Me()
+            username = request.headers['X-LIBRARY-USERNAME']
+            password = request.headers['X-LIBRARY-PASSWORD']
+
+            try:
+                cookies = me.login(username, password)
+            except LibraryLoginError:
+                return jsonify(error=u'登录失败'), 403
+            except LibraryChangePasswordError, e:
+                return jsonify(error=u'需要激活帐号', next=e.next), 403
+
+            token = cookies.values()[0]
+
+            if self.pass_pwd:
+                return func(username, token, me, password, *args, **kwargs)
+            else:
+                return func(username, token, me, *args, **kwargs)
+
+        return check_auth
+
+auth_required = AuthRequired()
+auth_required_carry_pwd = AuthRequired(True)
 
 
 def store_book_result(book_infos, is_commit=False):
