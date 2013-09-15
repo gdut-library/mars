@@ -22,3 +22,7 @@ class BookSlip(db.Model):
                             backref=db.backref('book_slip', lazy='select'))
     user = db.relationship(User, backref='book_slip', uselist=False,
                            lazy='select')
+
+    @property
+    def __dictify__(self):
+        return [i.__dictify__ for i in self.books]

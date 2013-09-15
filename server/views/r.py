@@ -3,7 +3,8 @@
 from functools import wraps
 
 from flask import Blueprint
-from flask import request
+from flask import request, Response
+from flask.views import MethodView
 
 import api
 from api import (
@@ -13,7 +14,7 @@ from api import (
 
 from server.utils import json_view, jsonify
 from server.db import db
-from server.models import User, Book, BookLocation
+from server.models import User, Book, BookLocation, BookSlip
 
 app = Blueprint('r', __name__)
 
@@ -58,15 +59,18 @@ auth_required = AuthRequired()
 auth_required_carry_pwd = AuthRequired(True)
 
 
-def store_book_result(book_infos, is_commit=False):
+def store_book_result(book_infos, check_exists=True, is_commit=False):
     '''保存书籍查询信息
 
     :param book_infos: 书籍查询结果
+    :param check_exists: 是否先检查数据库里面是否存在
     :param is_commit: 是否在执行完后执行 commit
     '''
-    book = Book.query.filter_by(ctrlno=book_infos['ctrlno']).first()
-    if book:
-        return book
+
+    if check_exists:
+        book = Book.query.filter_by(ctrlno=book_infos['ctrlno']).first()
+        if book:
+            return book
 
     locations = book_infos.pop('locations')
 
@@ -86,6 +90,30 @@ def store_book_result(book_infos, is_commit=False):
     return book
 
 
+def create_user(user_infos, check_exists=True, is_commit=False):
+    '''创建用户
+
+    :param user_infos: 用户信息
+    :param check_exists: 是否先检查数据库里面是否存在
+    :param is_commit: 是否在执行完后执行 commit
+    '''
+
+    if check_exists:
+        user = User.query.filter_by(cardno=user_infos['cardno']).first()
+        if user:
+            return user
+
+    user = User(**user_infos)
+    user.book_slip = BookSlip()
+    db.session.add(user.book_slip)
+    db.session.add(user)
+
+    if is_commit:
+        db.session.commit()
+
+    return user
+
+
 @app.route('/user/login', methods=['POST'])
 @json_view
 @auth_required_carry_pwd
@@ -97,11 +125,7 @@ def user_login(username, token, me, password):
     TODO 添加异步任务（查询借阅历史）
     '''
     personal = me.personal(token)
-    user = User.query.filter_by(cardno=personal['cardno']).first()
-    if not user:
-        user = User(**personal)
-        db.session.add(user)
-        db.session.commit()
+    user = create_user(personal, is_commit=True)
 
     return jsonify(user=user)
 
@@ -114,11 +138,82 @@ def user_infomations(username, token, me):
     user = User.query.filter_by(cardno=username).first()
     if not user:
         personal = me.personal(token)
-        user = User(**personal)
-        db.session.add(user)
-        db.session.commit()
+        user = create_user(personal, check_exists=False, is_commit=True)
 
     return jsonify(user=user)
+
+
+class BookSlipView(MethodView):
+    decorators = [json_view, auth_required]
+
+    def _get_book_record(self, ctrlno):
+        book = Book.query.filter_by(ctrlno=ctrlno).first()
+
+        if not book:
+            book_api = api.Book()
+            try:
+                book_infos = book_api.get(ctrlno)
+            except LibraryNotFoundError:
+                return False
+            book = store_book_result(book_infos, check_exists=False,
+                                     is_commit=True)
+
+        return book
+
+    def get(self, username, token, me):
+        '''返回用户书单列表'''
+        user = User.query.filter_by(cardno=username).first()
+
+        return jsonify(books=user.book_slip)
+
+    def put(self, username, token, me):
+        '''往用户书单里添加一本图书
+
+        如果添加的书籍不存在，返回 404
+
+        :param ctrlno: 书籍编号
+
+        TODO 使用 api/user/books/:ctrlno 的模式
+        '''
+        user = User.query.filter_by(cardno=username).first()
+        book = self._get_book_record(request.args.get('ctrlno'))
+
+        if not book:
+            return jsonify(msg=u'添加的书籍不存在'), 404
+
+        user.book_slip.books.append(book)
+        db.session.commit()
+
+        return Response(status=201)
+
+    def delete(self, username, token, me):
+        '''从用户书单里移除书籍
+
+        如果需要移除的书籍不在书单里，返回 404
+
+        :param ctrlno: 书籍编号，如果值为 `all` 则清空整个书单
+
+        TODO 使用 api/user/books/:ctrlno 的模式
+        '''
+        user = User.query.filter_by(cardno=username).first()
+        book_slip = user.book_slip
+
+        ctrlno = request.args.get('ctrlno')
+        if ctrlno == u'all':
+            book_slip.books = book_slip.books[0:0]
+        else:
+            book = self._get_book_record(ctrlno)
+
+            if not book or book not in book_slip.books:
+                return jsonify(msg=u'需要移除的书籍不存在'), 404
+
+            book_slip.books.remove(book)
+
+        db.session.commit()
+        return Response(status=201)
+
+
+app.add_url_rule('/user/books', view_func=BookSlipView.as_view('bookslip'))
 
 
 @app.route('/book/<string:ctrlno>', methods=['GET'])
