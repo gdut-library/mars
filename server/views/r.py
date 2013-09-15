@@ -128,9 +128,4 @@ def book_search():
     book = api.Book()
     results = book.search(q, verbose, limit)
 
-    if verbose:
-        for i in results:
-            store_book_result(i['details'])
-        db.session.commit()
-
     return jsonify(books=results)
