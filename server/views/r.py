@@ -88,18 +88,14 @@ def store_book_result(book_infos, is_commit=False):
 
 @app.route('/user/login', methods=['POST'])
 @json_view
-def user_login():
-    me = api.Me()
-    username = request.form['username']
-    password = request.form['password']
+@auth_required_carry_pwd
+def user_login(username, token, me, password):
+    '''用户登录
 
-    try:
-        token = me.login(username, password).values()[0]
-    except LibraryChangePasswordError, e:
-        return jsonify(error=u'需要激活账户', next=e.next), 403
-    except LibraryLoginError:
-        return jsonify(error=u'登录失败'), 403
+    假如数据库里没有用户条目，添加到数据库中
 
+    TODO 添加异步任务（查询借阅历史）
+    '''
     personal = me.personal(token)
     user = User.query.filter_by(cardno=personal['cardno']).first()
     if not user:
@@ -107,26 +103,31 @@ def user_login():
         db.session.add(user)
         db.session.commit()
 
-    return jsonify(token=token, user=user)
+    return jsonify(user=user)
 
 
 @app.route('/user/me', methods=['GET'])
 @json_view
 @auth_required
-def user_infomations(token, me):
-    # TODO
-    # 应该能从数据库里获取而不是要查询图书馆
-    personal = me.personal(token)
+def user_infomations(username, token, me):
+    '''获取当前用户信息'''
+    user = User.query.filter_by(cardno=username).first()
+    if not user:
+        personal = me.personal(token)
+        user = User(**personal)
+        db.session.add(user)
+        db.session.commit()
 
-    return jsonify(user=personal)
+    return jsonify(user=user)
 
 
 @app.route('/book/<string:ctrlno>', methods=['GET'])
 @json_view
 def book(ctrlno):
-    # TODO
-    # 添加调用次数限制
+    '''根据 ctrlno 获取书籍信息
 
+    TODO 添加调用次数限制
+    '''
     book = Book.query.filter_by(ctrlno=ctrlno).first()
     if not book:
         try:
@@ -143,8 +144,14 @@ def book(ctrlno):
 @app.route('/book/search', methods=['GET'])
 @json_view
 def book_search():
-    # TODO
-    # 添加调用次数限制
+    '''根据任意关键字查询书籍
+
+    :param q: 关键字
+    :param limit: 结果限制，默认为 20
+    :param verbose: 是否包含书籍详细信息
+
+    TODO 添加调用次数限制
+    '''
 
     q = request.args.get('q')
     verbose = int(request.args.get('verbose', 0))
