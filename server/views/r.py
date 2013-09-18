@@ -252,6 +252,9 @@ def book_search():
     limit = int(request.args.get('limit', 20))
     verbose = True if verbose else False
 
+    if not q:
+        return jsonify(error=u'请指定查询关键字'), 403
+
     book = api.Book()
     results = book.search(q, verbose, limit)
 
