@@ -9,7 +9,7 @@ from flask.views import MethodView
 import api
 from api import (
     LibraryChangePasswordError, LibraryLoginError,
-    LibraryNotFoundError
+    LibraryNotFoundError, LibraryNetworkError
 )
 
 from server.utils import json_view, jsonify
@@ -112,6 +112,17 @@ def create_user(user_infos, check_exists=True, is_commit=False):
         db.session.commit()
 
     return user
+
+
+@app.errorhandler(LibraryNetworkError)
+@json_view
+def network_error_handler(error):
+    '''网络错误处理
+
+    TODO error logging
+    '''
+
+    return jsonify(msg=u'网络错误'), 500
 
 
 @app.route('/user/login', methods=['POST'])
