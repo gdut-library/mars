@@ -125,6 +125,17 @@ def network_error_handler(error):
     return jsonify(msg=u'网络错误'), 500
 
 
+@app.errorhandler(LibraryNotFoundError)
+@json_view
+def notfound_error_handler(error):
+    '''书籍查找失败处理
+
+    TODO error logging
+    '''
+
+    return jsonify(msg=u'书籍没有找到'), 404
+
+
 @app.route('/user/login', methods=['POST'])
 @json_view
 @auth_required_carry_pwd
