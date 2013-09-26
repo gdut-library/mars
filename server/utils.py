@@ -41,3 +41,7 @@ def jsonify(**kwargs):
             except AttributeError:
                 pass
     return _jsonify(**kwargs)
+
+
+def error(msg, status_code=500, *args, **kwargs):
+    return jsonify(error=msg, *args, **kwargs), status_code

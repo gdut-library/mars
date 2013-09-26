@@ -12,7 +12,7 @@ from api import (
     LibraryNotFoundError, LibraryNetworkError
 )
 
-from server.utils import json_view, jsonify
+from server.utils import json_view, jsonify, error
 from server.db import db
 from server.models import User, Book, BookLocation, BookSlip
 
@@ -42,9 +42,10 @@ class AuthRequired(object):
             try:
                 cookies = me.login(username, password)
             except LibraryLoginError:
-                return jsonify(error=u'登录失败'), 403
+                return error(u'登录失败', 403)
             except LibraryChangePasswordError, e:
-                return jsonify(error=u'需要激活帐号', next=e.next), 403
+                return error(u'需要激活帐号', next=e.next,
+                             status_code=403)
 
             token = cookies.values()[0]
 
@@ -116,24 +117,24 @@ def create_user(user_infos, check_exists=True, is_commit=False):
 
 @app.errorhandler(LibraryNetworkError)
 @json_view
-def network_error_handler(error):
+def network_error_handler(e):
     '''网络错误处理
 
     TODO error logging
     '''
 
-    return jsonify(msg=u'网络错误'), 500
+    return error(u'网络错误', 500)
 
 
 @app.errorhandler(LibraryNotFoundError)
 @json_view
-def notfound_error_handler(error):
+def notfound_error_handler(e):
     '''书籍查找失败处理
 
     TODO error logging
     '''
 
-    return jsonify(msg=u'书籍没有找到'), 404
+    return error(u'书籍没有找到', 404)
 
 
 @app.route('/user/login', methods=['POST'])
@@ -250,7 +251,7 @@ def book(ctrlno):
             book_api = api.Book()
             book_infos = book_api.get(ctrlno)
         except LibraryNotFoundError:
-            return jsonify(error=u'没有找到图书 %s' % ctrlno), 404
+            return error(u'没有找到图书 %s' % ctrlno, 404)
 
         book = store_book_result(book_infos, True)
 
