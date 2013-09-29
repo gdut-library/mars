@@ -36,8 +36,8 @@ class AuthRequired(object):
         @wraps(func)
         def check_auth(*args, **kwargs):
             me = api.Me()
-            username = request.headers['X-LIBRARY-USERNAME']
-            password = request.headers['X-LIBRARY-PASSWORD']
+            username = request.headers.get('X-LIBRARY-USERNAME')
+            password = request.headers.get('X-LIBRARY-PASSWORD')
 
             try:
                 cookies = me.login(username, password)
