@@ -205,7 +205,7 @@ class BookSlipView(MethodView):
         user.book_slip.books.append(book)
         db.session.commit()
 
-        return Response(status=201)
+        return jsonify(books=user.book_slip), 201
 
     def delete(self, username, token, me, ctrlno):
         '''从用户书单里移除书籍
@@ -228,7 +228,7 @@ class BookSlipView(MethodView):
             book_slip.books.remove(book)
 
         db.session.commit()
-        return Response(status=201)
+        return Response(status=204)
 
 
 book_slip_view = BookSlipView.as_view('bookslip')
