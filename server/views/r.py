@@ -41,11 +41,11 @@ class AuthRequired(object):
 
             try:
                 cookies = me.login(username, password)
-            except LibraryLoginError:
-                return error(u'登录失败', 403)
             except LibraryChangePasswordError, e:
                 return error(u'需要激活帐号', next=e.next,
                              status_code=403)
+            except LibraryLoginError, e:
+                return error(u'登录失败', 403)
 
             token = cookies.values()[0]
 
