@@ -2,7 +2,7 @@
 
 from functools import wraps
 
-from flask import Blueprint
+from flask import Blueprint, current_app
 from flask import request, Response
 from flask.views import MethodView
 
@@ -120,7 +120,8 @@ def create_user(user_infos, check_exists=True, is_commit=False):
 def network_error_handler(e):
     '''网络错误处理'''
 
-    app.logger.error('hitting %s from %s' % (request.url, request.remote_addr))
+    current_app.logger.error('hitting %s from %s' % (request.url,
+                                                     request.remote_addr))
 
     return error(u'网络错误', 500)
 
@@ -130,8 +131,8 @@ def network_error_handler(e):
 def notfound_error_handler(e):
     '''书籍查找失败处理'''
 
-    app.logger.warning('hitting %s from %s' % (request.url,
-                                               request.remote_addr))
+    current_app.logger.warning('hitting %s from %s' % (request.url,
+                                                       request.remote_addr))
 
     return error(u'书籍没有找到', 404)
 
