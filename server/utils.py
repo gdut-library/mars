@@ -2,7 +2,7 @@
 
 from functools import wraps
 
-from flask import make_response
+from flask import make_response, request
 from flask import jsonify as _jsonify
 
 from server.db import db
@@ -28,7 +28,9 @@ def json_view(func):
         if isinstance(rv, str) or isinstance(rv, unicode):
             rv = make_response(rv)
 
-        rv.headers.add('Access-Control-Allow-Origin', '*')
+        origin = request.headers.get('Origin', None)
+        if origin:
+            rv.headers.add('Access-Control-Allow-Origin', origin)
         return rv, status, headers
     return allow_CORS
 
