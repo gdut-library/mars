@@ -60,6 +60,29 @@ auth_required = AuthRequired()
 auth_required_carry_pwd = AuthRequired(True)
 
 
+def update_book_location(book, locations, is_commit=False):
+    '''更新书籍馆藏信息
+
+    :param book: 书籍条目信息
+    :param locations: 书籍馆藏信息
+    :param is_commit: 是否在执行完后进行 commit
+    '''
+
+    available = len(filter(lambda x: x['status'] == u'可供出借', locations))
+    total = len(locations)
+    if not book.location:
+        book.location = BookLocation(locations[0]['location'], available,
+                                     total)
+        db.session.add(book.location)
+    else:
+        book.location.update(locations[0]['location'], available, total)
+
+    if is_commit:
+        db.session.commit()
+
+    return book
+
+
 def store_book_result(book_infos, check_exists=True, is_commit=False):
     '''保存书籍查询信息
 
@@ -78,12 +101,7 @@ def store_book_result(book_infos, check_exists=True, is_commit=False):
     book = Book(**book_infos)
     db.session.add(book)
 
-    available = len(filter(lambda x: x['status'] == u'可供出借',
-                           locations))
-    total = len(locations)
-    location = BookLocation(locations[0]['location'], available, total)
-    location.book = book
-    db.session.add(location)
+    update_book_location(book, locations, False)
 
     if is_commit:
         db.session.commit()
@@ -243,17 +261,21 @@ app.add_url_rule('/user/books', view_func=book_slip_view,
 def book(ctrlno):
     '''根据 ctrlno 获取书籍信息
 
+    TODO 将库存更新单独出来
     TODO 添加调用次数限制
     '''
     book = Book.query.filter_by(ctrlno=ctrlno).first()
-    if not book:
-        try:
-            book_api = api.Book()
-            book_infos = book_api.get(ctrlno)
-        except LibraryNotFoundError:
-            return error(u'没有找到图书 %s' % ctrlno, 404)
+    try:
+        book_api = api.Book()
+        book_infos = book_api.get(ctrlno)
 
-        book = store_book_result(book_infos, True)
+        if book:
+            update_book_location(book, book_infos['locations'], True)
+        else:
+            book = store_book_result(book_infos, False, True)
+    except LibraryNotFoundError:
+        if not book:
+            return error(u'没有找到图书 %s' % ctrlno, 404)
 
     return jsonify(book=book)
 

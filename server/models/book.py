@@ -43,6 +43,11 @@ class BookLocation(db.Model):
         self.available = available
         self.total = total
 
+    def update(self, location, available, total):
+        self.location = location
+        self.available = available
+        self.total = total
+
     @property
     def __dictify__(self):
         return {
