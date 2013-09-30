@@ -118,10 +118,9 @@ def create_user(user_infos, check_exists=True, is_commit=False):
 @app.errorhandler(LibraryNetworkError)
 @json_view
 def network_error_handler(e):
-    '''网络错误处理
+    '''网络错误处理'''
 
-    TODO error logging
-    '''
+    app.logger.error('hitting %s from %s' % (request.url, request.remote_addr))
 
     return error(u'网络错误', 500)
 
@@ -129,10 +128,10 @@ def network_error_handler(e):
 @app.errorhandler(LibraryNotFoundError)
 @json_view
 def notfound_error_handler(e):
-    '''书籍查找失败处理
+    '''书籍查找失败处理'''
 
-    TODO error logging
-    '''
+    app.logger.warning('hitting %s from %s' % (request.url,
+                                               request.remote_addr))
 
     return error(u'书籍没有找到', 404)
 
