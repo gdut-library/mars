@@ -1,4 +1,5 @@
 data/
+logs/
 
 server.nginx.conf
 supervisord.conf
