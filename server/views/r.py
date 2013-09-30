@@ -243,6 +243,7 @@ app.add_url_rule('/user/books', view_func=book_slip_view,
 def book(ctrlno):
     '''根据 ctrlno 获取书籍信息
 
+    TODO 将更新库存单独出来
     TODO 添加调用次数限制
     '''
     book = Book.query.filter_by(ctrlno=ctrlno).first()
