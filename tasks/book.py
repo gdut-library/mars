@@ -1,5 +1,7 @@
 #coding: utf-8
 
+from time import sleep
+
 from flask import current_app
 
 import api
@@ -52,5 +54,6 @@ def update_books():
         current_app.logger.debug('start updating all books...')
         for book in Book.query.all():
             book_queue.enqueue(update_book, book.ctrlno)
+            sleep(5)
 
     return True

@@ -2,3 +2,4 @@
 
 from .book import *
 from .queue import *
+from .scheduler import *
