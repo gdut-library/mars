@@ -78,10 +78,7 @@ def store_book_result(book_infos, check_exists=True, is_commit=False):
     book = Book(**book_infos)
     db.session.add(book)
 
-    available = len(filter(lambda x: x['status'] == u'可供出借',
-                           locations))
-    total = len(locations)
-    location = BookLocation(locations[0]['location'], available, total)
+    location = BookLocation(**BookLocation.from_api(locations))
     location.book = book
     db.session.add(location)
 

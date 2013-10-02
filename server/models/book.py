@@ -38,6 +38,14 @@ class BookLocation(db.Model):
 
     book_id = db.Column(db.Integer, db.ForeignKey('book.id'))
 
+    @staticmethod
+    def from_api(l):
+        return {
+            'available': len(filter(lambda x: x['status'] == u'可供出借', l)),
+            'total': len(l),
+            'location': l[0]['location']
+        }
+
     def __init__(self, location, available, total):
         self.location = location
         self.available = available

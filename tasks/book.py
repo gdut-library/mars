@@ -9,7 +9,7 @@ from api import LibraryNotFoundError
 
 from server.app import build
 from server.db import db
-from server.models import Book
+from server.models import Book, BookLocation
 
 from .queue import book_queue
 
@@ -22,8 +22,6 @@ def update_book(ctrlno):
 
     :param ctrlno: 书籍控制号
     :param database: 数据库
-
-    TODO isolate location updating
     '''
     try:
         book_api = api.Book()
@@ -37,10 +35,8 @@ def update_book(ctrlno):
         if not book:
             return
 
-        locations = book_infos.get('locations')
-        book.location.available = len(
-            filter(lambda x: x['status'] == u'可供出借', locations))
-        book.location.total = len(locations)
+        BookLocation.query.filter_by(id=book.location.id).update(
+            BookLocation.from_api(book_infos['locations']))
         db.session.commit()
 
     return book_infos
