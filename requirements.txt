@@ -1,7 +1,7 @@
+-e git+https://github.com/gdut-library/mecury.git#egg=GDUT_Library_API-master
 Flask==0.10.1
 Flask-SQLAlchemy==1.0
 Flask-Script==0.6.2
--e git+https://github.com/gdut-library/mecury.git@ee235ab9a79e5bd8cf693a641eba86a2ac61d67f#egg=GDUT_Library_API-master
 Jinja2==2.7.1
 Mako==0.9.0
 MarkupSafe==0.18
