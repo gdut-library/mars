@@ -47,3 +47,23 @@ def jsonify(**kwargs):
 
 def error(msg, status_code=500, *args, **kwargs):
     return jsonify(error=msg, *args, **kwargs), status_code
+
+
+# TODO
+# - add topic
+# - async sending
+def send_mail(app, msg):
+    if not app.config.get('EMAIL_ENABLE', False) or app.debug:
+        return
+
+    import smtplib
+
+    username = app.config.get('EMAIL_LOGIN')
+    password = app.config.get('EMAIL_PWD')
+    dest = app.config.get('EMAIL_DEST')
+
+    server = smtplib.SMTP('smtp.gmail.com:587')
+    server.starttls()
+    server.login(username, password)
+    server.sendmail(username, dest, msg)
+    server.quit()

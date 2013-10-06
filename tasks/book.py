@@ -10,6 +10,7 @@ from api import LibraryNotFoundError
 from server.app import build
 from server.db import db
 from server.models import Book, BookLocation
+from server.utils import send_mail
 
 from .queue import book_queue
 
@@ -48,6 +49,7 @@ def update_books():
     app = build()
     with app.app_context():
         current_app.logger.debug('start updating all books...')
+        send_mail(app, 'start updating all books')
         for book in Book.query.all():
             book_queue.enqueue(update_book, book.ctrlno)
             sleep(5)
