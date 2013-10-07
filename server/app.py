@@ -28,19 +28,8 @@ def register_blueprint(app):
 
 
 def register_logging(app):
-    import logging
-    from logging.handlers import RotatingFileHandler
+    import logging.config
 
-    log_path = app.config.get('LOG_FILE', 'app.log')
-    if app.debug:
-        log_path = log_path + '.debug'
-
-    file_handler = RotatingFileHandler(log_path)
-    file_handler.setLevel(logging.WARNING)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s '
-        '[from %(pathname)s:%(lineno)d]'
-    ))
-    app.logger.addHandler(file_handler)
+    logging.config.dictConfig(app.config['LOGGING_CONFIG'])
 
     return app

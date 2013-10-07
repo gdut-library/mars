@@ -1,11 +1,20 @@
 #coding: utf-8
 
 from functools import wraps
+from logging.handlers import SMTPHandler as _SMTPHandler
 
 from flask import make_response, request
 from flask import jsonify as _jsonify
 
 from server.db import db
+
+
+class SMTPHandler(_SMTPHandler):
+    '''SMTP logging handler adapter'''
+
+    def __init__(self, *args, **kwargs):
+        super(SMTPHandler, self).__init__(*args, **kwargs)
+        self._timeout = 15  # give me more time!
 
 
 def json_view(func):
@@ -47,23 +56,3 @@ def jsonify(**kwargs):
 
 def error(msg, status_code=500, *args, **kwargs):
     return jsonify(error=msg, *args, **kwargs), status_code
-
-
-# TODO
-# - add topic
-# - async sending
-def send_mail(app, msg):
-    if not app.config.get('EMAIL_ENABLE', False) or app.debug:
-        return
-
-    import smtplib
-
-    username = app.config.get('EMAIL_LOGIN')
-    password = app.config.get('EMAIL_PWD')
-    dest = app.config.get('EMAIL_DEST')
-
-    server = smtplib.SMTP('smtp.gmail.com:587')
-    server.starttls()
-    server.login(username, password)
-    server.sendmail(username, dest, msg)
-    server.quit()

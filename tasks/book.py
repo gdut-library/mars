@@ -1,8 +1,7 @@
 #coding: utf-8
 
+import logging
 from time import sleep
-
-from flask import current_app
 
 import api
 from api import LibraryNotFoundError
@@ -10,12 +9,14 @@ from api import LibraryNotFoundError
 from server.app import build
 from server.db import db
 from server.models import Book, BookLocation
-from server.utils import send_mail
 
 from .queue import book_queue
 
 
 __all__ = ['update_book', 'update_books']
+
+
+logger = logging.getLogger('tasks')
 
 
 def update_book(ctrlno):
@@ -48,8 +49,7 @@ def update_books():
 
     app = build()
     with app.app_context():
-        current_app.logger.debug('start updating all books...')
-        send_mail(app, 'start updating all books')
+        logger.info('start updating all books...')
         for book in Book.query.all():
             book_queue.enqueue(update_book, book.ctrlno)
             sleep(5)
