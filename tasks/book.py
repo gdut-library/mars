@@ -37,8 +37,15 @@ def update_book(ctrlno):
         if not book:
             return
 
+        # 更新书籍库存信息
         BookLocation.query.filter_by(id=book.location.id).update(
             BookLocation.from_api(book_infos['locations']))
+
+        # 更新书籍豆瓣信息
+        Book.query.filter_by(ctrlno=ctrlno).update({
+            'douban_details': Book.get_douban_details(book.isbn) or 'null'
+        })
+
         db.session.commit()
 
     return book_infos

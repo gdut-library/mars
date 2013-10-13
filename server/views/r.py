@@ -251,7 +251,10 @@ def book(ctrlno):
         except LibraryNotFoundError:
             return error(u'没有找到图书 %s' % ctrlno, 404)
 
-        book = store_book_result(book_infos, True)
+        isbn = book_infos['isbn'] or None
+        book_infos['douban_details'] = Book.get_douban_details(isbn) or None
+
+        book = store_book_result(book_infos, is_commit=True)
 
     return jsonify(book=book)
 
