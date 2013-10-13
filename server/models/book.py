@@ -1,5 +1,8 @@
 #coding: utf-8
 
+import json
+import requests
+
 from server.db import db
 
 
@@ -11,14 +14,29 @@ class Book(db.Model):
     ctrlno = db.Column(db.String(10), nullable=False, unique=True)
     name = db.Column(db.String(120), nullable=False)
     isbn = db.Column(db.String(20))
+    douban_details = db.Column(db.String(5000))  # raw json blob
 
     location = db.relationship('BookLocation', backref='book', lazy='select',
                                uselist=False)
 
-    def __init__(self, ctrlno, name, isbn, *args, **kwargs):
+    @staticmethod
+    def get_douban_details(isbn):
+        '''根据 isbn 获取豆瓣条目信息
+
+        :param isbn: 书籍 isbn 码
+        '''
+
+        if not isbn:
+            return
+        resp = requests.get('https://api.douban.com/v2/book/isbn/%s' % isbn)
+        return resp.ok and resp.text
+
+    def __init__(self, ctrlno, name, isbn, douban_details=None,
+                 *args, **kwargs):
         self.ctrlno = ctrlno
         self.name = name
         self.isbn = isbn
+        self.douban_details = douban_details or 'null'
 
     @property
     def __dictify__(self):
@@ -26,6 +44,7 @@ class Book(db.Model):
             'ctrlno': self.ctrlno,
             'name': self.name,
             'isbn': self.isbn,
+            'douban_details': json.loads(self.douban_details or 'null'),
             'location': self.location.__dictify__
         }
 
