@@ -4,3 +4,4 @@ logs/
 
 server.nginx.conf
 supervisord.conf
+alembic.ini

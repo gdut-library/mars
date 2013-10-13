@@ -2,6 +2,8 @@
 
 import os
 
+from configurations.douban_secret import *
+
 DEBUG = True
 
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.abspath('data/server.db')
