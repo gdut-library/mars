@@ -240,9 +240,13 @@ app.add_url_rule('/user/books', view_func=book_slip_view,
 def book(ctrlno):
     '''根据 ctrlno 获取书籍信息
 
+    :param details: 是否包含书籍详细信息
+
     TODO 将更新库存单独出来
     TODO 添加调用次数限制
     '''
+    details = int(request.args.get('details', 0))
+
     book = Book.query.filter_by(ctrlno=ctrlno).first()
     if not book:
         try:
@@ -251,10 +255,17 @@ def book(ctrlno):
         except LibraryNotFoundError:
             return error(u'没有找到图书 %s' % ctrlno, 404)
 
-        isbn = book_infos['isbn'] or None
-        book_infos['douban_details'] = Book.get_douban_details(isbn) or None
+        book_infos['douban_details'] = None
+
+        if details:
+            isbn = book_infos['isbn'] or None
+            book_infos['douban_details'] = Book.get_douban_details(isbn)
 
         book = store_book_result(book_infos, is_commit=True)
+
+    if not details:
+        book = book.__dictify__
+        book.pop('douban_details')
 
     return jsonify(book=book)
 
