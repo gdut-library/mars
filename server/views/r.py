@@ -1,5 +1,6 @@
 #coding: utf-8
 
+import time
 import logging
 from functools import wraps
 
@@ -276,7 +277,9 @@ def book_search():
     if not q:
         return jsonify(error=u'请指定查询关键字'), 403
 
+    started = time.time()
     book = api.Book()
     results = book.search(q, verbose, limit)
+    logger.debug('search duration: %ds', int(time.time() - started))
 
     return jsonify(books=results)
