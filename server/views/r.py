@@ -277,9 +277,10 @@ def book_search():
     if not q:
         return jsonify(error=u'请指定查询关键字'), 403
 
+    logger.debug('search duration start')
     started = time.time()
     book = api.Book()
     results = book.search(q, verbose, limit)
-    logger.debug('search duration: %ds', int(time.time() - started))
+    logger.debug('search duration end: %d', int(time.time() - started))
 
     return jsonify(books=results)
