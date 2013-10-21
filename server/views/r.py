@@ -1,8 +1,9 @@
 #coding: utf-8
 
+import time
 import logging
 
-from flask import Blueprint
+from flask import Blueprint, current_app
 from flask import request, Response
 from flask.views import MethodView
 
@@ -178,18 +179,24 @@ def book_search():
     '''
 
     q = request.args.get('q')
+    if not q:
+        return jsonify(error=u'请指定查询关键字'), 403
+
     verbose = int(request.args.get('verbose', 0))
     limit = min(int(request.args.get('limit', 10)), 30)
     verbose = True if verbose else False
 
-    if not q:
-        return jsonify(error=u'请指定查询关键字'), 403
-
     # 调用 douban api 查询
-    # 因为图书馆藏书没有那么多，为了保证查询结果的数目
-    # 所以要增加在 douban 的查询量
-    results = filter(None, [douban.book_mocking(i)
-                            for i in douban.search(q, limit + 10)])
+    results, start = [], time.time()
+    timeout = current_app.config.get('SEARCH_TIMEOUT', 10)
+    for raw in douban.search(q, limit=200):  # 有些书可能图书馆没有
+        if time.time() - start > timeout:  # 超时
+            break
+        if len(results) >= limit:
+            break
+        book = douban.book_mocking(raw)
+        if book:
+            results.append(book)
     db.session.commit()  # 保存新增的记录
 
     return jsonify(books=results)

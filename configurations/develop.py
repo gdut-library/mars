@@ -7,6 +7,7 @@ DEBUG = True
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.abspath('data/server.db')
 
 SECRET_KEY = 'gdut library rocks'
+SEARCH_TIMEOUT = 10
 
 LOGGING_CONFIG = {
     'formatters': {
