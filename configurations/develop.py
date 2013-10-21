@@ -11,7 +11,7 @@ SECRET_KEY = 'gdut library rocks'
 LOGGING_CONFIG = {
     'formatters': {
         'brief': {
-            'format': '%(levelname)s %(name)s %(message)s'
+            'format': '%(asctime)s %(levelname)s %(name)s %(message)s'
         }
     },
     'filters': [],
