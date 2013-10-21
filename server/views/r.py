@@ -1,118 +1,25 @@
 #coding: utf-8
 
-import time
 import logging
-from functools import wraps
 
 from flask import Blueprint
 from flask import request, Response
 from flask.views import MethodView
 
 import api
-from api import (
-    LibraryChangePasswordError, LibraryLoginError,
-    LibraryNotFoundError, LibraryNetworkError
-)
+from api import LibraryNetworkError, LibraryNotFoundError
 
-from server.utils import json_view, jsonify, error
 from server.db import db
-from server.models import User, Book, BookLocation, BookSlip
+from server.models import Book, User
+from server.helpers import douban_api as douban
+from server.helpers.book import store_book_result
+from server.helpers.user import (create_user, auth_required,
+                                 auth_required_carry_pwd)
+from server.utils import json_view, jsonify, error, LogDuration
+
 
 app = Blueprint('r', __name__)
 logger = logging.getLogger('app')
-
-
-class AuthRequired(object):
-    '''对调用请求进行用户登录验证的装饰器，
-    被装饰函数在调用时会填入 `username`, `token` 和 `api.me` 实例，
-    假如 `pass_pwd` 为真，将填入用户密码 `password`
-
-    如果登录失败，返回 `登录失败`, 403
-    如果需要激活，返回 `需要激活帐号`, 403 以及验证地址
-
-    :param pass_pwd: 是否填入用户密码, 默认为否
-    '''
-    def __init__(self, pass_pwd=None):
-        self.pass_pwd = pass_pwd or pass_pwd
-
-    def __call__(self, func):
-        @wraps(func)
-        def check_auth(*args, **kwargs):
-            me = api.Me()
-            username = request.headers.get('X-LIBRARY-USERNAME')
-            password = request.headers.get('X-LIBRARY-PASSWORD')
-
-            try:
-                cookies = me.login(username, password)
-            except LibraryChangePasswordError, e:
-                return error(u'需要激活帐号', next=e.next,
-                             status_code=403)
-            except LibraryLoginError, e:
-                return error(u'登录失败', 403)
-
-            token = cookies.values()[0]
-
-            if self.pass_pwd:
-                return func(username, token, me, password, *args, **kwargs)
-            else:
-                return func(username, token, me, *args, **kwargs)
-
-        return check_auth
-
-auth_required = AuthRequired()
-auth_required_carry_pwd = AuthRequired(True)
-
-
-def store_book_result(book_infos, check_exists=True, is_commit=False):
-    '''保存书籍查询信息
-
-    :param book_infos: 书籍查询结果
-    :param check_exists: 是否先检查数据库里面是否存在
-    :param is_commit: 是否在执行完后执行 commit
-    '''
-
-    if check_exists:
-        book = Book.query.filter_by(ctrlno=book_infos['ctrlno']).first()
-        if book:
-            return book
-
-    locations = book_infos.pop('locations')
-
-    book = Book(**book_infos)
-    db.session.add(book)
-
-    location = BookLocation(**BookLocation.from_api(locations))
-    location.book = book
-    db.session.add(location)
-
-    if is_commit:
-        db.session.commit()
-
-    return book
-
-
-def create_user(user_infos, check_exists=True, is_commit=False):
-    '''创建用户
-
-    :param user_infos: 用户信息
-    :param check_exists: 是否先检查数据库里面是否存在
-    :param is_commit: 是否在执行完后执行 commit
-    '''
-
-    if check_exists:
-        user = User.query.filter_by(cardno=user_infos['cardno']).first()
-        if user:
-            return user
-
-    user = User(**user_infos)
-    user.book_slip = BookSlip()
-    db.session.add(user.book_slip)
-    db.session.add(user)
-
-    if is_commit:
-        db.session.commit()
-
-    return user
 
 
 @app.errorhandler(LibraryNetworkError)
@@ -259,11 +166,12 @@ def book(ctrlno):
 
 @app.route('/book/search', methods=['GET'])
 @json_view
+@LogDuration(logger.debug, 'search start', 'search end %d')
 def book_search():
     '''根据任意关键字查询书籍
 
     :param q: 关键字
-    :param limit: 结果限制，默认为 20
+    :param limit: 结果限制，默认为 10, 最多为 30
     :param verbose: 是否包含书籍详细信息
 
     TODO 添加调用次数限制
@@ -271,16 +179,17 @@ def book_search():
 
     q = request.args.get('q')
     verbose = int(request.args.get('verbose', 0))
-    limit = int(request.args.get('limit', 20))
+    limit = min(int(request.args.get('limit', 10)), 30)
     verbose = True if verbose else False
 
     if not q:
         return jsonify(error=u'请指定查询关键字'), 403
 
-    logger.debug('search duration start')
-    started = time.time()
-    book = api.Book()
-    results = book.search(q, verbose, limit)
-    logger.debug('search duration end: %d', int(time.time() - started))
+    # 调用 douban api 查询
+    # 因为图书馆藏书没有那么多，为了保证查询结果的数目
+    # 所以要增加在 douban 的查询量
+    results = filter(None, [douban.book_mocking(i)
+                            for i in douban.search(q, limit + 10)])
+    db.session.commit()  # 保存新增的记录
 
     return jsonify(books=results)
