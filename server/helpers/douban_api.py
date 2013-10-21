@@ -32,9 +32,8 @@ def book_mocking(db_book):
 
     # 查询图书馆端
     book_api = api.Book()
-    book = None
-    with ignores(api.LibraryNotFoundError):
-        for i in [isbn['isbn10-hyphen'], isbn['isbn13-hyphen']]:
+    for i in [isbn['isbn10-hyphen'], isbn['isbn13-hyphen']]:
+        with ignores(api.LibraryNotFoundError):
             results = book_api.search(i)
             if results:
                 book_infos = book_api.get(results[0]['ctrlno'])
