@@ -199,4 +199,7 @@ def book_search():
             results.append(book)
     db.session.commit()  # 保存新增的记录
 
+    if not results:
+        raise LibraryNotFoundError
+
     return jsonify(books=results)
