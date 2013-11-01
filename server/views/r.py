@@ -16,7 +16,8 @@ from server.helpers import douban_api as douban
 from server.helpers.book import store_book_result
 from server.helpers.user import (create_user, auth_required,
                                  auth_required_carry_pwd)
-from server.utils import json_view, jsonify, error, LogDuration
+from server.utils import (json_view, jsonify, error, LogDuration, ignores,
+                          parse_isbn)
 
 
 app = Blueprint('r', __name__)
@@ -185,6 +186,30 @@ def book_search():
     verbose = int(request.args.get('verbose', 0))
     limit = min(int(request.args.get('limit', 10)), 30)
     verbose = True if verbose else False
+
+    # ISBN 查询
+    with ignores(ValueError):
+        isbns = parse_isbn(str(int(q.replace('-', '')))).values()
+
+        # 先查询本地
+        for isbn in isbns:
+            book = Book.query.filter_by(isbn=isbn).first()
+            if book:
+                return jsonify(books=[book])
+
+        # 查询服务器端
+        book_api = api.Book()
+        for isbn in isbns:
+            with ignores(LibraryNotFoundError):
+                books = book_api.search(isbn, verbose=True)
+
+                for book in books:
+                    store_book_result(book['details'], check_exists=False)
+                db.session.commit()
+
+                return jsonify(books=books)
+
+        raise LibraryNotFoundError
 
     # 调用 douban api 查询
     results, start = [], time.time()
